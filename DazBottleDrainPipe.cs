@@ -15,76 +15,44 @@ using Klei;
 
 namespace DazDrains
 {
-
-    //copied from https://forums.kleientertainment.com/forums/topic/123339-guide-for-creating-translatable-mods/?tab=comments#comment-1390234 beflore major edits
     [HarmonyPatch(typeof(Localization), "Initialize")]
     public class Localization_Initialize_Patch
     {
-        
         public static void Postfix()
         {
             // Basic intended way to register strings, keeps namespace
-            RegisterForTranslation(typeof(DazDrains.STRINGS));
+            //loads them into Localisation module so language files load and apply.
+            RegisterForTranslation(typeof(DazDrains.DazBottleDrainPipe.STRINGS));
+
+            //find mod location that actually ran
             ModFileLoc = System.Reflection.Assembly.GetExecutingAssembly().CodeBase;
             ModFileLoc = ModFileLoc.Replace("file:///", "");
             ModFileLoc = ModFileLoc.Replace("DazBottleDrainPipe.dll", "");
-            //generates C:/ Users / diazo / Documents / Klei / OxygenNotIncluded / mods / Dev / DazBottleDrainPipe /
-   
-            //LoadStrings();
 
-            // Register strings without namespace, this is what the game actually uses
-            LocString.CreateLocStringKeys(typeof(DazDrains.STRINGS), null);
-            Debug.Log("Daz assem " + Strings.Get(DazDrains.STRINGS.BUILDINGS.PREFABS.DAZBOTTLEDRAINPIPE.EFFECT));
-            Debug.Log("Daz not assem " + Strings.Get(STRINGS.BUILDINGS.PREFABS.DAZBOTTLEDRAINPIPE.EFFECT));
-            Debug.Log("Daz not assem name" + Strings.Get(STRINGS.BUILDINGS.PREFABS.DAZBOTTLEDRAINPIPE.NAME));
-            // Creates template for users to edit
-            //GenerateStringsTemplate(typeof(DazDrains.STRINGS), Path.Combine(ModFileLoc, "strings_templates"));
-            Debug.Log("Daz translated strings " + Path.Combine(ModFileLoc, "strings_templates/" + GetLocale()?.Code + ".po"));
+            // Creates template for users to edit, enable if strings change
+            //GenerateStringsTemplate(typeof(DazDrains.DazBottleDrainPipe.STRINGS), Path.Combine(ModFileLoc, "strings_templates"));
+           // Debug.Log("Daz translated strings " + Path.Combine(ModFileLoc, "strings_templates/" + GetLocale()?.Code + ".po"));
             if (GetLocale()?.Code != null)
             {
-                Debug.Log("Daz translated strings " + Path.Combine(ModFileLoc, "strings_templates/" + GetLocale()?.Code + ".po"));
+                //Debug.Log("Daz translated strings " + Path.Combine(ModFileLoc, "strings_templates/" + GetLocale()?.Code + ".po"));
                 OverloadStrings(LoadStringsFile(Path.Combine(ModFileLoc, "strings_templates/" + GetLocale()?.Code + ".po"), false));
             }
-            else
-            {
-                Debug.Log("Daz Lang code null");
-            }
-            Debug.Log("Daz assem 2" + Strings.Get(DazDrains.STRINGS.BUILDINGS.PREFABS.DAZBOTTLEDRAINPIPE.EFFECT));
-            Debug.Log("Daz not assem 2" + Strings.Get(STRINGS.BUILDINGS.PREFABS.DAZBOTTLEDRAINPIPE.EFFECT));
-            Debug.Log("Daz assem 3" + Strings.Get(DazDrains.STRINGS.BUILDINGS.PREFABS.DAZBOTTLEDRAINPIPE.NAME));
-            Debug.Log("Daz not assem 3a" + Strings.Get("." +STRINGS.BUILDINGS.PREFABS.DAZBOTTLEDRAINPIPE.NAME));
-            Strings.PrintTable();
-            //Strings.PrintTable();
-        }
-        public static string ModFileLoc;
+            //else
+            //{
+            //    Debug.Log("Daz Lang code null");
+            //}
+            
+            //copy localised strings from Localisation module to main strings module where BuildingDef will look for them.
+            Strings.Add("STRINGS.BUILDINGS.PREFABS.DAZBOTTLEDRAINPIPE.NAME", DazDrains.DazBottleDrainPipe.STRINGS.BUILDINGS.PREFABS.DAZBOTTLEDRAINPIPE.NAME);
+            Strings.Add("STRINGS.BUILDINGS.PREFABS.DAZBOTTLEDRAINPIPE.EFFECT", DazDrains.DazBottleDrainPipe.STRINGS.BUILDINGS.PREFABS.DAZBOTTLEDRAINPIPE.EFFECT);
+            Strings.Add("STRINGS.BUILDINGS.PREFABS.DAZBOTTLEDRAINPIPE.DESC", DazDrains.DazBottleDrainPipe.STRINGS.BUILDINGS.PREFABS.DAZBOTTLEDRAINPIPE.DESC);
+           
 
-        //private static void LoadStrings()
-        //{
-        //    string path = Path.Combine(KMod.Mod.ModPath, "translations", GetLocale()?.Code + ".po");
-        //    if (File.Exists(path))
-        
-              //OverloadStrings(LoadStringsFile(Path.Combine(ModFileLoc, "strings_templates/"+ GetLocale()?.Code + ".po"), false));
-             
-        //}
+        }
+        public static string ModFileLoc; //location of THIS mod .dll file on disk
 
     }
-
-    public class STRINGS
-    {
-        public class BUILDINGS
-        {
-            public class PREFABS
-            {
-                public class DAZBOTTLEDRAINPIPE
-                {
-                    public static LocString NAME = (LocString)UI.FormatAsLink("Bottle Drain to Pipe", nameof(DAZBOTTLEDRAINPIPE));
-                    public static LocString DESC = (LocString)("Allows Dupes to drain bottles into Liquid Pipe.");
-                    public static LocString EFFECT = (LocString)("Test Effect?");
-                }
-            }
-        }
-    }
-    
+  
 
 
     [HarmonyPatch(typeof(Db))]
@@ -94,6 +62,7 @@ namespace DazDrains
         public static void Postfix()
         {
             //add to tech tree, note it uses a sized array, so have to make a new array 1 bigger and add building ID
+            //remember Arrays are zero indexed
             int TempCount = Database.Techs.TECH_GROUPING["LiquidPiping"].Count() + 1;
             string[] TempArray = new string[TempCount];
             Database.Techs.TECH_GROUPING["LiquidPiping"].CopyTo(TempArray, 0);
@@ -110,32 +79,43 @@ namespace DazDrains
     {
         public static void Prefix()
         {
+            //believe this adds building to building menu at bottom of screen
             ModUtil.AddBuildingToPlanScreen("Plumbing", DazBottleDrainPipe.ID);
-                        
         }
-        //public static void Postfix()
-        //{
-        //    BuildingDef DazBottleTemp = Assets.GetBuildingDef("DazBottleDrainPipe");
-        //    Debug.Log("Daz name check: " + DazBottleTemp.Name + DazBottleTemp.Desc + DazBottleTemp.Effect);
-        //}
     }
 
-
+    //actual building config
     public class DazBottleDrainPipe : IBuildingConfig
     {
         public const string ID = "DazBottleDrainPipe";
 
+        //Strings DB for this mod
+        public class STRINGS
+        {
+            public class BUILDINGS
+            {
+                public class PREFABS
+                {
+                    public class DAZBOTTLEDRAINPIPE
+                    {
+                        public static LocString NAME = (LocString)UI.FormatAsLink("Bottle Drain", nameof(DAZBOTTLEDRAINPIPE));
+                        public static LocString DESC = (LocString)("Allows Dupes to drain Liquid Bottles into Pipes.\n\nAttached Element Filter can be used to limit liquids delivered to this station.");
+                        public static LocString EFFECT = (LocString)("Empties bottled " + UI.FormatAsLink("Liquids", "ELEMENTS_LIQUID") + " into " + UI.FormatAsLink("Liquid Pipe", "LIQUIDPIPING"));
+                    }
+                }
+            }
+        }
         public override BuildingDef CreateBuildingDef()
         {
-            Debug.Log("Daz making build def");
-            float[] tieR2 = TUNING.BUILDINGS.CONSTRUCTION_MASS_KG.TIER2;
+            
+            float[] tieR2 = TUNING.BUILDINGS.CONSTRUCTION_MASS_KG.TIER2; //not sure what this does?
             string[] plumbable = MATERIALS.PLUMBABLE;
             EffectorValues none1 = NOISE_POLLUTION.NONE;
             EffectorValues none2 = TUNING.BUILDINGS.DECOR.NONE;
             EffectorValues noise = none1;
             BuildingDef buildingDef = BuildingTemplates.CreateBuildingDef(ID, 1, 1, "DazBottleDrainPipe_kanim", 10, 3f, tieR2, plumbable, 1600f, BuildLocationRule.Anywhere, none2, noise);
             buildingDef.Floodable = false;
-            buildingDef.Overheatable = false;
+            buildingDef.Overheatable = false; //maybe in the future? for now if the pipe connected is fine, this building will work.
             buildingDef.Entombable = true;
             buildingDef.ViewMode = OverlayModes.LiquidConduits.ID;
             buildingDef.ObjectLayer = ObjectLayer.LiquidConduitConnection; 
@@ -143,19 +123,15 @@ namespace DazDrains
             buildingDef.AudioSize = "small";
             buildingDef.BaseTimeUntilRepair = -1f;
             buildingDef.OutputConduitType = ConduitType.Liquid;
-            buildingDef.UtilityInputOffset = new CellOffset(0, 0);
+            //buildingDef.UtilityInputOffset = new CellOffset(0, 0);
             buildingDef.UtilityOutputOffset = new CellOffset(0, 0);
             buildingDef.SceneLayer = Grid.SceneLayer.LiquidConduitBridges;
             buildingDef.DragBuild = false;
             GeneratedBuildings.RegisterWithOverlay(OverlayScreen.LiquidVentIDs, ID);
-            //Strings.Add("STRINGS.BUILDINGS.PREFABS." + ID.ToUpperInvariant() + ".NAME", "NamePlaceholder");
-            //Strings.Add("STRINGS.BUILDINGS.PREFABS." + ID.ToUpperInvariant() + ".DESC", "DescPlaceholer");
-            //Strings.Add("STRINGS.BUILDINGS.PREFABS." + ID.ToUpperInvariant() + ".EFFECT", "Effectplaceholder");
-                       
             return buildingDef;
         }
 
-        //required by IBuildingConfig, copied from LiquidConduitConfig for starting base
+        //required by IBuildingConfig
         public override void ConfigureBuildingTemplate(GameObject go, Tag prefab_tag)
         {
             Prioritizable.AddRef(go);
@@ -163,40 +139,23 @@ namespace DazDrains
             storage.storageFilters = STORAGEFILTERS.LIQUIDS;
             storage.showInUI = true;
             storage.showDescriptor = true;
-            storage.capacityKg = 107f;
+            storage.capacityKg = 200f;
             storage.allowItemRemoval = false;
             go.AddOrGet<TreeFilterable>();
             ConduitDispenser conduitDispenser = go.AddOrGet<ConduitDispenser>();
             conduitDispenser.conduitType = ConduitType.Liquid;
             conduitDispenser.alwaysDispense = true;
+            
             go.AddOrGet<DazBottleEmptier>();
 
         }
 
 
 
-        //required by IBuildingConfig, copied from LiquidConduitConfig for starting base
+        //required by IBuildingConfig, left empty as things appear to work fine.
         public override void DoPostConfigureComplete(GameObject go)
         {
-            //Debug.Log("Daz not assem 3" + Strings.Get(STRINGS.BUILDINGS.PREFABS.DAZBOTTLEDRAINPIPE.NAME));
-            //Debug.Log("Daz mod post config");
-            //Database.Techs.TECH_GROUPING["LiquidPiping"].Add("DazBottleDrainPipe");
-            //foreach (string str in Database.Techs.TECH_GROUPING["LiquidPiping"])
-            //{
-            //    Debug.Log("daz check " + str);
-            //}
         }
-        //public virtual void DoPostConfigurePreview(BuildingDef def, GameObject go)
-        //{
-        //}
-
-        //public virtual void DoPostConfigureUnderConstruction(GameObject go)
-        //{
-        //}
-
-        //public virtual void ConfigurePost(BuildingDef def)
-        //{
-        //}
     }
 
 
